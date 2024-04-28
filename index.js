@@ -1,26 +1,10 @@
-const config = {
-  video: { width: 800, height: 600, fps: 30 }
-}
+import { config, PIXEL_TO_CENTIMETER_RATIO_HEIGHT, PIXEL_TO_CENTIMETER_RATIO_WIDTH, landmarkColors, usedKeypoints, recommendations } from './config.js'
 
-const PIXEL_TO_CENTIMETER_RATIO_HEIGHT = 15.79
-const PIXEL_TO_CENTIMETER_RATIO_WIDTH = 11.81
+export const getKeyPointPostition = (keypoints, keyPointName) => keypoints.map(keypoint => keypoint.name).indexOf(keyPointName)
 
-const landmarkColors = {
-  thumb: 'red',
-  index: 'blue',
-  middle: 'yellow',
-  ring: 'green',
-  pinky: 'pink',
-  wrist: 'white'
-}
+export const filterKeypoints = (keypoints) => keypoints.filter(keypoint => usedKeypoints.includes(keypoint.name))
 
-const usedKeypoints = ['thumb_ip','middle_finger_tip', 'pinky_finger_mcp', 'wrist']
-
-const getKeyPointPostition = (keypoints, keyPointName) => keypoints.map(keypoint => keypoint.name).indexOf(keyPointName)
-
-const filterKeypoints = (keypoints) => keypoints.filter(keypoint => usedKeypoints.includes(keypoint.name))
-
-async function createDetector() {
+export async function createDetector() {
   return window.handPoseDetection.createDetector(
     window.handPoseDetection.SupportedModels.MediaPipeHands,
     {
@@ -32,7 +16,7 @@ async function createDetector() {
   )
 }
 
-async function main() {
+export async function main(onEstimateHands) {
 
   const video = document.querySelector("#pose-video")
   const canvas = document.querySelector("#pose-canvas")
@@ -54,18 +38,23 @@ async function main() {
         drawPoint(ctx, keypoint.x, keypoint.y, 3, color)
         
       }
-      drawLineBetweenKeyPoints(ctx, 'thumb_ip', 'pinky_finger_mcp', 'white', filteredKeypoints)
-      drawLineBetweenKeyPoints(ctx, 'middle_finger_tip', 'wrist', 'white', filteredKeypoints)
+      console.log({ onEstimateHands })
+      if(onEstimateHands) {
+        onEstimateHands(ctx, filteredKeypoints)
+      } else {
+        drawLineBetweenKeypoints(ctx, 'thumb_ip', 'pinky_finger_mcp', 'white', filteredKeypoints)
+        drawLineBetweenKeypoints(ctx, 'middle_finger_tip', 'wrist', 'white', filteredKeypoints)
+      }
 
     }
     setTimeout(() => { estimateHands() }, 1000 / config.video.fps)
   }
 
-  estimateHands()
+  estimateHands(onEstimateHands)
   console.log("Starting predictions")
 }
 
-async function initCamera(width, height, fps) {
+export async function initCamera(width, height, fps) {
 
   const constraints = {
     audio: false,
@@ -89,65 +78,63 @@ async function initCamera(width, height, fps) {
   })
 }
 
-function drawPoint(ctx, x, y, r, color) {
+export function drawPoint(ctx, x, y, r, color) {
   ctx.beginPath()
   ctx.arc(x, y, r, 0, 2 * Math.PI)
   ctx.fillStyle = color
   ctx.fill()
 }
 
-function drawText(ctx, text, x, y) {
+export function drawText(ctx, text, x, y) {
   ctx.font = '14px Arial';
   ctx.fillStyle = 'black';
   ctx.textAlign = 'center';
   ctx.fillText(text, x, y);
 }
 
-function drawLine(ctx, startPoint, endPoint, color, ratioToUse) {
+export function drawLine(ctx, startPoint, endPoint, color, ratioToUse) {
   ctx.beginPath();
   ctx.moveTo(startPoint.x, startPoint.y);
   ctx.lineTo(endPoint.x, endPoint.y);
   ctx.strokeStyle = color;
   ctx.stroke();
 
-  const length = Math.sqrt(Math.pow(endPoint.x - startPoint.x, 2) + Math.pow(endPoint.y - startPoint.y, 2));
-  const lengthInCm = length / ratioToUse
-  drawText(ctx, lengthInCm.toFixed(2) + ' cm', (startPoint.x + endPoint.x) / 2  , (startPoint.y + endPoint.y) / 2)
-  drawText(ctx, length.toFixed(2) + ' px', ((startPoint.x + endPoint.x) / 2) + 100, ((startPoint.y + endPoint.y) / 2))
+  const handLength = Math.sqrt(Math.pow(endPoint.x - startPoint.x, 2) + Math.pow(endPoint.y - startPoint.y, 2));
+  const handLengthInCm = handLength / ratioToUse
+  drawText(ctx, handLengthInCm.toFixed(2) + ' cm', (startPoint.x + endPoint.x) / 2  , (startPoint.y + endPoint.y) / 2)
+  drawText(ctx, handLength.toFixed(2) + ' px', ((startPoint.x + endPoint.x) / 2) + 100, ((startPoint.y + endPoint.y) / 2))
+
+  return handLengthInCm
 }
 
-function getKeyPointByName(keypointName, filteredKeypoints) {
+export function getKeyPointByName(keypointName, filteredKeypoints) {
   return filteredKeypoints[getKeyPointPostition(filteredKeypoints, keypointName)]
 }
 
-function drawLineBetweenKeyPoints(ctx, keypoint1Name, keypoint2Name, color, filteredKeypoints) {
+export function drawLineBetweenKeypoints(ctx, keypoint1Name, keypoint2Name, color, filteredKeypoints) {
   const keypoint1 = getKeyPointByName(keypoint1Name, filteredKeypoints)
   const keypoint2 = getKeyPointByName(keypoint2Name, filteredKeypoints)
   const ratioToUse = [keypoint1Name, keypoint2Name].includes('wrist') ? PIXEL_TO_CENTIMETER_RATIO_HEIGHT : PIXEL_TO_CENTIMETER_RATIO_WIDTH
-  drawLine(ctx, keypoint1, keypoint2, color, ratioToUse)
+  return drawLine(ctx, keypoint1, keypoint2, color, ratioToUse)
 }
 
-function updateDebugInfo(data, hand) {
-  const summaryTable = `#summary-${hand}`
-  for (let fingerIdx in data) {
-    document.querySelector(`${summaryTable} span#curl-${fingerIdx}`).innerHTML = data[fingerIdx][1]
-    document.querySelector(`${summaryTable} span#dir-${fingerIdx}`).innerHTML = data[fingerIdx][2]
-  }
-}
-
-window.addEventListener("DOMContentLoaded", () => {
-  initCamera(
-    config.video.width, config.video.height, config.video.fps
-  ).then(video => {
-    video.play()
-    video.addEventListener("loadeddata", event => {
-      console.log("Camera is ready")
-      main()
+export const run = (config, onEstimateHands) => {
+    window.addEventListener("DOMContentLoaded", () => {
+    initCamera(
+        config.video.width, config.video.height, config.video.fps
+    ).then(video => {
+        video.play()
+        video.addEventListener("loadeddata", event => {
+        console.log("Camera is ready")
+        main(onEstimateHands)
+        })
     })
-  })
 
-  const canvas = document.querySelector("#pose-canvas")
-  canvas.width = config.video.width
-  canvas.height = config.video.height
-  console.log("Canvas initialized")
-})
+    const canvas = document.querySelector("#pose-canvas")
+    canvas.width = config.video.width
+    canvas.height = config.video.height
+    console.log("Canvas initialized")
+    })
+}
+
+run(config)

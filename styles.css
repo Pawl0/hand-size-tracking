@@ -10,15 +10,32 @@ body {
     overflow: hidden;
     font-family: Arial, sans-serif;
     background-color: #ffffff;
-    color: #333333;
-    margin: 0;
-    padding: 0;
+    color: #000;
 }
 
 .container {
-    margin: 20px auto;
+    margin: 20px 32px;
     display: flex;
-    justify-content: center;
+    justify-content: space-around;
+    column-gap: 32px;
+}
+
+.recommendation-container {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+}
+
+#recommendation-list {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+}
+
+.recommendation_item {
+    width: 200px;
+    height: 200px;
+    object-fit: contain;
 }
 
 .video {
@@ -28,6 +45,12 @@ body {
 #video-container {
     width: 800px;
     height: 600px;
+    position: relative;
+}
+
+#half-screen-video-container {
+    width: 640px;
+    height: 480px;
     position: relative;
 }
 
