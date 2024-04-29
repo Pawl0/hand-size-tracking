@@ -1,4 +1,4 @@
-import { config, PIXEL_TO_CENTIMETER_RATIO_HEIGHT, PIXEL_TO_CENTIMETER_RATIO_WIDTH, landmarkColors, usedKeypoints, recommendations } from './config.js'
+import { config, PIXEL_TO_CENTIMETER_RATIO_HEIGHT, PIXEL_TO_CENTIMETER_RATIO_WIDTH, landmarkColors, usedKeypoints, initCamera } from './config.js'
 
 export const getKeyPointPostition = (keypoints, keyPointName) => keypoints.map(keypoint => keypoint.name).indexOf(keyPointName)
 
@@ -36,10 +36,10 @@ export async function main(onEstimateHands) {
         const name = keypoint.name.split('_')[0].toString().toLowerCase()
         const color = landmarkColors[name]
         drawPoint(ctx, keypoint.x, keypoint.y, 3, color)
-        
+
       }
       console.log({ onEstimateHands })
-      if(onEstimateHands) {
+      if (onEstimateHands) {
         onEstimateHands(ctx, filteredKeypoints)
       } else {
         drawLineBetweenKeypoints(ctx, 'thumb_ip', 'pinky_finger_mcp', 'white', filteredKeypoints)
@@ -52,30 +52,6 @@ export async function main(onEstimateHands) {
 
   estimateHands(onEstimateHands)
   console.log("Starting predictions")
-}
-
-export async function initCamera(width, height, fps) {
-
-  const constraints = {
-    audio: false,
-    video: {
-      facingMode: "user",
-      width: width,
-      height: height,
-      frameRate: { max: fps }
-    }
-  }
-
-  const video = document.querySelector("#pose-video")
-  video.width = width
-  video.height = height
-
-  const stream = await navigator.mediaDevices.getUserMedia(constraints)
-  video.srcObject = stream
-
-  return new Promise(resolve => {
-    video.onloadedmetadata = () => { resolve(video) }
-  })
 }
 
 export function drawPoint(ctx, x, y, r, color) {
@@ -101,7 +77,7 @@ export function drawLine(ctx, startPoint, endPoint, color, ratioToUse) {
 
   const handLength = Math.sqrt(Math.pow(endPoint.x - startPoint.x, 2) + Math.pow(endPoint.y - startPoint.y, 2));
   const handLengthInCm = handLength / ratioToUse
-  drawText(ctx, handLengthInCm.toFixed(2) + ' cm', (startPoint.x + endPoint.x) / 2  , (startPoint.y + endPoint.y) / 2)
+  drawText(ctx, handLengthInCm.toFixed(2) + ' cm', (startPoint.x + endPoint.x) / 2, (startPoint.y + endPoint.y) / 2)
   drawText(ctx, handLength.toFixed(2) + ' px', ((startPoint.x + endPoint.x) / 2) + 100, ((startPoint.y + endPoint.y) / 2))
 
   return handLengthInCm
@@ -119,22 +95,22 @@ export function drawLineBetweenKeypoints(ctx, keypoint1Name, keypoint2Name, colo
 }
 
 export const run = (config, onEstimateHands) => {
-    window.addEventListener("DOMContentLoaded", () => {
+  window.addEventListener("DOMContentLoaded", () => {
     initCamera(
-        config.video.width, config.video.height, config.video.fps
+      config.video.width, config.video.height, config.video.fps
     ).then(video => {
-        video.play()
-        video.addEventListener("loadeddata", event => {
+      video.play()
+      video.addEventListener("loadeddata", event => {
         console.log("Camera is ready")
         main(onEstimateHands)
-        })
+      })
     })
 
     const canvas = document.querySelector("#pose-canvas")
     canvas.width = config.video.width
     canvas.height = config.video.height
     console.log("Canvas initialized")
-    })
+  })
 }
 
 run(config)
