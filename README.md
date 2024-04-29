@@ -1,5 +1,6 @@
 # hand size tracking
-
+BE A PRO STORE 
+App para reconhecimento de tamanho da mão e sugestão de mouse apropriado de acordo com os dados coletados em tempo real.
 ## Installation
 
 - Run npm install in the terminal
